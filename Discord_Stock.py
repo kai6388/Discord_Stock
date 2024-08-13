@@ -30,7 +30,7 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 scheduler = AsyncIOScheduler()
 
 # 관심 종목 리스트
-WATCHLIST_FILE = 'watchlist.txt'
+watchlist = 'watchlist.txt'
 
 @bot.event
 async def on_ready():
@@ -56,14 +56,14 @@ async def add_to_watchlist(ctx, ticker: str):
 
 def save_watchlist():
     """관심종목을 watchlist.txt 파일에 저장하는 함수"""
-    with open(WATCHLIST_FILE, 'w') as f:
+    with open(watchlist, 'w') as f:
         for ticker in watchlist:
             f.write(f"{ticker}\n")
 
 def load_watchlist():
     """watchlist.txt 파일에서 관심종목을 불러오는 함수"""
-    if os.path.exists(WATCHLIST_FILE):
-        with open(WATCHLIST_FILE, 'r') as f:
+    if os.path.exists(watchlist):
+        with open(watchlist, 'r') as f:
             for line in f:
                 ticker = line.strip().upper()
                 if ticker and ticker not in watchlist:
