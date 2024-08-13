@@ -17,9 +17,8 @@ if TOKEN is None:
 # 조회할 주식 티커 리스트
 STOCK_TICKERS = ['TQQQ', 'NVDA', 'NVDL']  # 원하는 주식 티커를 추가하세요
 
-client = discord.Client()
-# 사용자가 명령어 입력 시 !를 입력하고 명령어 입력
-client = commands.Bot(command_prefix='!')
+intents = discord.Intents.default()
+client = discord.Client(intents=intents)
 
 # 스케줄러 초기화
 scheduler = AsyncIOScheduler()
@@ -39,7 +38,7 @@ async def on_message(message):
         return
     
     # 특정 명령어 입력 시 주식 가격 알림 실행
-    if message.content.startswith('종가'):
+    if message.content.startswith('!종가'):
         await stock_price_notification()
 
 async def stock_price_notification():
