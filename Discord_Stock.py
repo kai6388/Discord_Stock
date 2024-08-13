@@ -30,11 +30,13 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 scheduler = AsyncIOScheduler()
 
 # 관심 종목 리스트
-watchlist = []
+watchlist = 'watchlist.txt'
 
 @bot.event
 async def on_ready():
     print(f'Logged in as {bot.user}')
+    
+    load_watchlist()
     
     # 매일 오전 5시 30분에 stock_price_notification 함수를 실행하도록 스케줄러 설정
     scheduler.add_job(calculate_ma_scheduled, 'cron', hour=20, minute=15)
@@ -47,9 +49,26 @@ async def add_to_watchlist(ctx, ticker: str):
     ticker = ticker.upper()
     if ticker not in watchlist:
         watchlist.append(ticker)
+        save_watchlist()
         await ctx.send(f"{ticker}가 관심종목에 추가되었습니다.")
     else:
         await ctx.send(f"{ticker}는 이미 관심종목에 있습니다.")
+
+def save_watchlist():
+    """관심종목을 watchlist.txt 파일에 저장하는 함수"""
+    with open(WATCHLIST_FILE, 'w') as f:
+        for ticker in watchlist:
+            f.write(f"{ticker}\n")
+
+def load_watchlist():
+    """watchlist.txt 파일에서 관심종목을 불러오는 함수"""
+    if os.path.exists(WATCHLIST_FILE):
+        with open(WATCHLIST_FILE, 'r') as f:
+            for line in f:
+                ticker = line.strip().upper()
+                if ticker and ticker not in watchlist:
+                    watchlist.append(ticker)
+    print(f"관심종목 불러오기 완료: {', '.join(watchlist)}")
 
 async def check_watchlist():
     for ticker in watchlist:
