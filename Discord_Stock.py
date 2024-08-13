@@ -1,11 +1,13 @@
 import discord
 import yfinance as yf
 import pandas as pd
+import os
+import matplotlib.pyplot as plt
 from discord.ext import commands
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from datetime import datetime
-import os
 from dotenv import load_dotenv
+
 
 load_dotenv()
 
@@ -74,8 +76,8 @@ def load_watchlist():
 
 async def check_watchlist():
     for ticker in watchlist:
-        # 주식 데이터 가져오기 (2일간)
-        data = yf.download(ticker, period='2d')
+        # 주식 데이터 가져오기 (1년간)
+        data = yf.download(ticker, period='1Y')
         latest_close = data['Close'].iloc[-1]
         previous_close = data['Close'].iloc[-2]
         change_percent = ((latest_close - previous_close) / previous_close) * 100
@@ -103,10 +105,28 @@ async def check_watchlist():
         if crossed_mas:
             message += f"크로스된 MA: {', '.join(crossed_mas)}\n"
 
+        # 차트 생성
+        plt.figure(figsize=(10, 6))
+        plt.plot(data['Close'], label='Close Price')
+        plt.plot(data['Close'].rolling(window=20).mean(), label='20MA')
+        plt.plot(data['Close'].rolling(window=50).mean(), label='50MA')
+        plt.plot(data['Close'].rolling(window=100).mean(), label='100MA')
+        plt.plot(data['Close'].rolling(window=200).mean(), label='200MA')
+        plt.title(f"{ticker} 가격 차트")
+        plt.xlabel("날짜")
+        plt.ylabel("가격")
+        plt.legend()
+
+        # 차트 저장
+        chart_file = f"{ticker}_chart.png"
+        plt.savefig(chart_file)
+        plt.close()
+
         # 디스코드 채널에 결과 전송
         channel = bot.get_channel(CHANNEL_ID)  # CHANNEL_ID는 출력할 디스코드 채널의 ID로 설정해야 합니다.
         if channel:
             await channel.send(message)
+            await channel.send(file=discord.File(chart_file))
 
 @bot.command(name='관심종목') #관심종목 조회
 async def display_watchlist(ctx):
