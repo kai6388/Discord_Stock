@@ -116,8 +116,11 @@ async def send_TQQQ_MA(ctx):
     previous_ma_200 = ma_200.iloc[-2]
     previous_ma_20 = ma_20.iloc[-2]
 
+    # 변화율 계산
+    change_percent = ((latest_close - previous_close) / previous_close) * 100
+
     # 결과 생성
-    result = (f"TQQQ의 최근 종가: {latest_close:.2f}\n"
+    result = (f"TQQQ의 최근 종가: {latest_close:.2f} ({change_percent:.2f}% 변화)\n"
               f"20일 이동평균선: {latest_ma_20:.2f}\n"
               f"20일 이동평균선 + 10%: {latest_ma_20_plus_10:.2f}\n"
               f"200일 이동평균선: {latest_ma_200:.2f}\n"
