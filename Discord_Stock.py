@@ -9,7 +9,7 @@ load_dotenv()
 
 # 디스코드 봇 토큰
 TOKEN = os.getenv('DISCORD_TOKEN')
-CHANNEL_ID = your_channel_id_here  # 메세지를 보낼 디스코드 채널 ID를 입력하세요
+CHANNEL_ID = 1272735912148861008  # 메세지를 보낼 디스코드 채널 ID를 입력하세요
 
 if TOKEN is None:
     raise ValueError("DISCORD_TOKEN is not set. Check your .env file.")
