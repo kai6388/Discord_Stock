@@ -1,5 +1,6 @@
 import discord
 import yfinance as yf
+from discord.ext import commands
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from datetime import datetime
 import os
