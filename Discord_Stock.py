@@ -35,7 +35,7 @@ async def on_ready():
     
     # 매일 오전 5시 30분에 stock_price_notification 함수를 실행하도록 스케줄러 설정
     scheduler.add_job(stock_price_notification, 'cron', hour=5, minute=30)
-    scheduler.add_job(TQQQ_200MA, 'cron', hour=5, minute=30)
+    scheduler.add_job(calculate_200ma_scheduled, 'cron', hour=5, minute=30)
     scheduler.start()
 
 @bot.command(name='종가')
@@ -74,7 +74,17 @@ async def send_single_stock_price(channel, ticker): #개별 종가 출력 함수
         await channel.send(f"티커 {ticker}에 대한 정보를 가져오는데 실패했습니다: {e}")
 
 @bot.command(name='200MA')
-async def TQQQ_200MA(ctx):
+async def calculate_200ma(ctx):
+    await send_200ma_analysis(ctx.channel)
+
+async def calculate_200ma_scheduled():
+    channel = bot.get_channel(CHANNEL_ID)
+    if channel is not None:
+        await send_200ma_analysis(channel)
+    else:
+        print("채널을 찾을 수 없습니다. CHANNEL_ID를 확인하세요.")
+
+async def send_TQQQ_200MA(ctx):
     # TQQQ의 지난 1년간의 데이터 가져오기
     ticker = 'TQQQ'
     data = yf.download(ticker, period='1y')
