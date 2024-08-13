@@ -37,8 +37,14 @@ async def on_ready():
     scheduler.start()
 
 @bot.command(name='종가')
-async def stock_price(ctx):
-    await stock_price_notification(ctx.channel)
+async def stock_price(ctx, *tickers):
+    if len(tickers) == 0:
+        # 티커가 입력되지 않으면 기본 티커 리스트를 사용
+        await stock_price_notification(ctx.channel)
+    else:
+        # 사용자가 입력한 티커들에 대해 종가 출력
+        for ticker in tickers:
+            await send_single_stock_price(ctx.channel, ticker)
 
 async def stock_price_notification(channel=None):
     try:
@@ -49,15 +55,21 @@ async def stock_price_notification(channel=None):
         if channel is not None:
             # 각 주식 티커에 대해 종가를 가져와서 메시지로 전송
             for ticker in STOCK_TICKERS:
-                stock = yf.Ticker(ticker)
-                closing_price = stock.history(period='1d')['Close'].iloc[0]
-                await channel.send(f"{datetime.now().strftime('%Y-%m-%d')} {ticker} 종가: ${closing_price:.2f}")
+                await send_single_stock_price(channel, ticker)
         else:
             print("채널을 찾을 수 없습니다. CHANNEL_ID를 확인하세요.")
     except Exception as e:
         print(f"주식 정보를 가져오는데 실패했습니다: {e}")
         if channel is not None:
             await channel.send(f"주식 정보를 가져오는데 실패했습니다: {e}")
+
+async def send_single_stock_price(channel, ticker):
+    try:
+        stock = yf.Ticker(ticker)
+        closing_price = stock.history(period='1d')['Close'].iloc[0]
+        await channel.send(f"{datetime.now().strftime('%Y-%m-%d')} {ticker} 종가: ${closing_price:.2f}")
+    except Exception as e:
+        await channel.send(f"티커 {ticker}에 대한 정보를 가져오는데 실패했습니다: {e}")
 
 # 봇 실행
 bot.run(TOKEN)
