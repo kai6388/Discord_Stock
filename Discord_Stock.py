@@ -68,7 +68,7 @@ async def stock_price_notification(channel=None): #종가 출력 함수
 async def send_single_stock_price(channel, ticker): #개별 종가 출력 함수
     try:
         # 2일간의 데이터를 가져옵니다.
-        data = yf.download(ticker, period='2d')
+        data = yf.download(ticker, period='5d')
     
         # 최신 종가와 이전 종가를 가져옵니다.
         latest_close = data['Close'].iloc[-1]
