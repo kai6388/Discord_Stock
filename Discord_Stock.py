@@ -17,7 +17,7 @@ if TOKEN is None:
     raise ValueError("DISCORD_TOKEN is not set. Check your .env file.")
 
 # 조회할 주식 티커 리스트
-STOCK_TICKERS = ['TQQQ', 'NVDA', 'NVDL']  # 원하는 주식 티커를 추가하세요
+STOCK_TICKERS = ['GSPC', 'IXIC']  # 원하는 주식 티커를 추가하세요
 
 # 인텐트 설정
 intents = discord.Intents.default()
