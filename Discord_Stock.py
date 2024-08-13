@@ -51,7 +51,6 @@ async def add_to_watchlist(ctx, ticker: str):
     else:
         await ctx.send(f"{ticker}는 이미 관심종목에 있습니다.")
 
-@bot.command(name='관심종목MA') # 관심종목 이평선 계산
 async def check_watchlist():
     for ticker in watchlist:
         # 주식 데이터 가져오기 (2일간)
