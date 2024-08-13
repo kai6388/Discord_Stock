@@ -34,8 +34,8 @@ async def on_ready():
     print(f'Logged in as {bot.user}')
     
     # 매일 오전 5시 30분에 stock_price_notification 함수를 실행하도록 스케줄러 설정
-    scheduler.add_job(stock_price_notification, 'cron', hour=5, minute=30)
-    scheduler.add_job(calculate_ma_scheduled, 'cron', hour=5, minute=30)
+    scheduler.add_job(stock_price_notification, 'cron', hour=20, minute=30)
+    scheduler.add_job(calculate_ma_scheduled, 'cron', hour=20, minute=30)
     scheduler.start()
 
 @bot.command(name='종가')
