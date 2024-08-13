@@ -30,7 +30,7 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 scheduler = AsyncIOScheduler()
 
 # 관심 종목 리스트
-watchlist = 'watchlist.txt'
+WATCHLIST_FILE = 'watchlist.txt'
 
 @bot.event
 async def on_ready():
