@@ -75,12 +75,12 @@ async def send_single_stock_price(channel, ticker): #개별 종가 출력 함수
 
 @bot.command(name='200MA')
 async def calculate_200ma(ctx):
-    await send_200ma_analysis(ctx.channel)
+    await send_TQQQ_200MA(ctx.channel)
 
 async def calculate_200ma_scheduled():
     channel = bot.get_channel(CHANNEL_ID)
     if channel is not None:
-        await send_200ma_analysis(channel)
+        await send_TQQQ_200MA(channel)
     else:
         print("채널을 찾을 수 없습니다. CHANNEL_ID를 확인하세요.")
 
