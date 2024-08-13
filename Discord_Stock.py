@@ -5,6 +5,8 @@ from datetime import datetime
 import os
 from dotenv import load_dotenv
 
+load_dotenv()
+
 # 디스코드 봇 토큰
 TOKEN = os.getenv('DISCORD_TOKEN')
 CHANNEL_ID = your_channel_id_here  # 메세지를 보낼 디스코드 채널 ID를 입력하세요
