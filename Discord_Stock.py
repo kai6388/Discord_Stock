@@ -52,8 +52,11 @@ async def stock_price_notification():
                 closing_price = stock.history(period='1d')['Close'].iloc[0]
                 await channel.send(f"{datetime.now().strftime('%Y-%m-%d')} {ticker} 종가: ${closing_price:.2f}")
         else:
-            print("채널을 찾을 수 없습니다.")
+            print("채널을 찾을 수 없습니다. CHANNEL_ID를 확인하세요.")
     except Exception as e:
         print(f"주식 정보를 가져오는데 실패했습니다: {e}")
+        if channel is not None:
+            await channel.send(f"주식 정보를 가져오는데 실패했습니다: {e}")
+
 
 client.run(TOKEN)
