@@ -35,7 +35,7 @@ async def on_ready():
     
     # 매일 오전 5시 30분에 stock_price_notification 함수를 실행하도록 스케줄러 설정
     scheduler.add_job(stock_price_notification, 'cron', hour=5, minute=30)
-    scheduler.add_job(calculate_200ma_scheduled, 'cron', hour=5, minute=30)
+    scheduler.add_job(calculate_ma_scheduled, 'cron', hour=5, minute=30)
     scheduler.start()
 
 @bot.command(name='종가')
@@ -73,18 +73,18 @@ async def send_single_stock_price(channel, ticker): #개별 종가 출력 함수
     except Exception as e:
         await channel.send(f"티커 {ticker}에 대한 정보를 가져오는데 실패했습니다: {e}")
 
-@bot.command(name='200MA')
-async def calculate_200ma(ctx):
-    await send_TQQQ_200MA(ctx.channel)
+@bot.command(name='TQQQ_MA')
+async def calculate_ma(ctx):
+    await send_TQQQ_MA(ctx.channel)
 
-async def calculate_200ma_scheduled():
+async def calculate_ma_scheduled():
     channel = bot.get_channel(CHANNEL_ID)
     if channel is not None:
-        await send_TQQQ_200MA(channel)
+        await send_TQQQ_MA(channel)
     else:
         print("채널을 찾을 수 없습니다. CHANNEL_ID를 확인하세요.")
 
-async def send_TQQQ_200MA(ctx):
+async def send_TQQQ_MA(ctx):
     # TQQQ의 지난 1년간의 데이터 가져오기
     ticker = 'TQQQ'
     data = yf.download(ticker, period='1y')
@@ -95,30 +95,45 @@ async def send_TQQQ_200MA(ctx):
     # 200일 이동평균선 계산
     ma_200 = closing_prices.rolling(window=200).mean()
 
+    # 20일 이동편균선 계산
+    ma_20 = closing_prices.rolling(window=20).mean()
+
     # 200일 이동평균선 + 10% 계산
     ma_200_plus_10 = ma_200 * 1.10
+    
+    # 20일 이동평균선 + 10% 계산
+    ma_20_plus_10 = ma_20 * 1.10
 
     # 최신 데이터
     latest_close = closing_prices.iloc[-1]
     latest_ma_200 = ma_200.iloc[-1]
     latest_ma_200_plus_10 = ma_200_plus_10.iloc[-1]
+    latest_ma_20 = ma_20.iloc[-1]
+    latest_ma_20_plus_10 = ma_20_plus_10.iloc[-1]
 
     # 이전 종가와 200MA 계산
     previous_close = closing_prices.iloc[-2]
     previous_ma_200 = ma_200.iloc[-2]
+    previous_ma_20 = ma_20.iloc[-2]
 
     # 결과 생성
     result = (f"TQQQ의 최근 종가: {latest_close:.2f}\n"
+              f"20일 이동평균선: {latest_ma_20:.2f}\n"
+              f"20일 이동평균선 + 10%: {latest_ma_20_plus_10:.2f}\n"
               f"200일 이동평균선: {latest_ma_200:.2f}\n"
               f"200일 이동평균선 + 10%: {latest_ma_200_plus_10:.2f}\n")
 
     # 매도/매수 판별
+    if previous_close > previous_ma_20 and latest_close < latest_ma_20:
+        result += "20MA TQQQ 매도"  # 위에서 아래로 내려간 경우
+    elif previous_close < previous_ma_20 and latest_close > latest_ma_20:
+        result += "20MA TQQQ 매수"  # 아래에서 위로 올라간 경우
     if previous_close > previous_ma_200 and latest_close < latest_ma_200:
-        result += "TQQQ 매도"  # 위에서 아래로 내려간 경우
+        result += "200MA TQQQ 매도"  # 위에서 아래로 내려간 경우
     elif previous_close < previous_ma_200 and latest_close > latest_ma_200:
-        result += "TQQQ 매수"  # 아래에서 위로 올라간 경우
+        result += "200MA TQQQ 매수"  # 아래에서 위로 올라간 경우
     else:
-        result += "TQQQ의 종가는 200MA에서 큰 변화가 없습니다."
+        result += "TQQQ의 종가는 큰 변화가 없습니다."
 
     # 채널에 결과 전송
     await ctx.send(result)
