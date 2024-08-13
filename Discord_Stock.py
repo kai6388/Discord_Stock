@@ -29,14 +29,70 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 # 스케줄러 초기화
 scheduler = AsyncIOScheduler()
 
+# 관심 종목 리스트
+watchlish = []
+
 @bot.event
 async def on_ready():
     print(f'Logged in as {bot.user}')
     
     # 매일 오전 5시 30분에 stock_price_notification 함수를 실행하도록 스케줄러 설정
-    scheduler.add_job(stock_price_notification, 'cron', hour=20, minute=30)
     scheduler.add_job(calculate_ma_scheduled, 'cron', hour=20, minute=15)
+    scheduler.add_job(stock_price_notification, 'cron', hour=20, minute=16)
+    scheduler.add_job(check_watchlist, 'cron', hour=20, minute=17)
     scheduler.start()
+
+@bot.command(name='add')
+async def add_to_watchlist(ctx, ticker: str):
+    ticker = ticker.upper()
+    if ticker not in watchlist:
+        watchlist.append(ticker)
+        await ctx.send(f"{ticker}가 관심종목에 추가되었습니다.")
+    else:
+        await ctx.send(f"{ticker}는 이미 관심종목에 있습니다.")
+
+async def check_watchlist():
+    for ticker in watchlist:
+        # 주식 데이터 가져오기 (2일간)
+        data = yf.download(ticker, period='2d')
+        latest_close = data['Close'].iloc[-1]
+        previous_close = data['Close'].iloc[-2]
+        change_percent = ((latest_close - previous_close) / previous_close) * 100
+
+        # 이동평균선 계산 (20, 50, 100, 200일)
+        ma_20 = data['Close'].rolling(window=20).mean().iloc[-1]
+        ma_50 = data['Close'].rolling(window=50).mean().iloc[-1]
+        ma_100 = data['Close'].rolling(window=100).mean().iloc[-1]
+        ma_200 = data['Close'].rolling(window=200).mean().iloc[-1]
+
+        # 종가와 이동평균선 비교
+        crossed_mas = []
+        if previous_close > ma_20 and latest_close < ma_20 or previous_close < ma_20 and latest_close > ma_20:
+            crossed_mas.append('20MA')
+        if previous_close > ma_50 and latest_close < ma_50 or previous_close < ma_50 and latest_close > ma_50:
+            crossed_mas.append('50MA')
+        if previous_close > ma_100 and latest_close < ma_100 or previous_close < ma_100 and latest_close > ma_100:
+            crossed_mas.append('100MA')
+        if previous_close > ma_200 and latest_close < ma_200 or previous_close < ma_200 and latest_close > ma_200:
+            crossed_mas.append('200MA')
+
+        # 출력 내용 생성
+        message = f"{ticker}의 종가: {latest_close:.2f}\n이전 종가 대비 변화율: {change_percent:.2f}%\n"
+
+        if crossed_mas:
+            message += f"크로스된 MA: {', '.join(crossed_mas)}\n"
+
+        # 디스코드 채널에 결과 전송
+        channel = bot.get_channel(CHANNEL_ID)  # CHANNEL_ID는 출력할 디스코드 채널의 ID로 설정해야 합니다.
+        if channel:
+            await channel.send(message)
+
+@bot.command(name='watchlist')
+async def display_watchlist(ctx):
+    if watchlist:
+        await ctx.send(f"현재 관심종목 리스트: {', '.join(watchlist)}")
+    else:
+        await ctx.send("현재 관심종목에 등록된 종목이 없습니다.")
 
 @bot.command(name='종가')
 async def stock_price(ctx, *tickers):
@@ -81,17 +137,6 @@ async def send_single_stock_price(channel, ticker): #개별 종가 출력 함수
     except Exception as e:
         await channel.send(f"티커 {ticker}에 대한 정보를 가져오는데 실패했습니다: {e}")
 
-@bot.command(name='TQQQ_MA')
-async def calculate_ma(ctx):
-    await send_TQQQ_MA(ctx.channel)
-
-async def calculate_ma_scheduled():
-    channel = bot.get_channel(CHANNEL_ID)
-    if channel is not None:
-        await send_TQQQ_MA(channel)
-    else:
-        print("채널을 찾을 수 없습니다. CHANNEL_ID를 확인하세요.")
-
 @bot.command(name='RSI')#특정 티커의 RSI 출력
 async def calculate_rsi(ctx, ticker: str):
     try:
@@ -117,6 +162,17 @@ async def calculate_rsi(ctx, ticker: str):
         await ctx.send(result)
     except Exception as e:
         await ctx.send(f"RSI를 계산하는 중 오류가 발생했습니다: {e}")
+
+@bot.command(name='TQQQ_MA')
+async def calculate_ma(ctx):
+    await send_TQQQ_MA(ctx.channel)
+
+async def calculate_ma_scheduled():
+    channel = bot.get_channel(CHANNEL_ID)
+    if channel is not None:
+        await send_TQQQ_MA(channel)
+    else:
+        print("채널을 찾을 수 없습니다. CHANNEL_ID를 확인하세요.")
 
 async def send_TQQQ_MA(ctx):#TQQQ의 20MA, 200MA를 출력
     try:
