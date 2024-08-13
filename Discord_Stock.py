@@ -30,7 +30,7 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 scheduler = AsyncIOScheduler()
 
 # 관심 종목 리스트
-watchlish = []
+watchlist = []
 
 @bot.event
 async def on_ready():
@@ -42,7 +42,7 @@ async def on_ready():
     scheduler.add_job(check_watchlist, 'cron', hour=20, minute=17)
     scheduler.start()
 
-@bot.command(name='add')
+@bot.command(name='관심종목추가')
 async def add_to_watchlist(ctx, ticker: str):
     ticker = ticker.upper()
     if ticker not in watchlist:
@@ -87,7 +87,7 @@ async def check_watchlist():
         if channel:
             await channel.send(message)
 
-@bot.command(name='watchlist')
+@bot.command(name='관심종목') #관심종목 조회
 async def display_watchlist(ctx):
     if watchlist:
         await ctx.send(f"현재 관심종목 리스트: {', '.join(watchlist)}")
