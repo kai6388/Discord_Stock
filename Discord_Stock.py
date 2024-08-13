@@ -67,9 +67,17 @@ async def stock_price_notification(channel=None): #종가 출력 함수
 
 async def send_single_stock_price(channel, ticker): #개별 종가 출력 함수
     try:
-        stock = yf.Ticker(ticker)
-        closing_price = stock.history(period='1d')['Close'].iloc[0]
-        await channel.send(f"{datetime.now().strftime('%Y-%m-%d')} {ticker} 종가: ${closing_price:.2f}")
+        # 2일간의 데이터를 가져옵니다.
+        data = yf.download(ticker, period='2d')
+    
+        # 최신 종가와 이전 종가를 가져옵니다.
+        latest_close = data['Close'].iloc[-1]
+        previous_close = data['Close'].iloc[-2]
+        
+        # 변화율을 계산합니다.
+        change_percent = ((latest_close - previous_close) / previous_close) * 100
+        
+        await channel.send(f"{datetime.now().strftime('%Y-%m-%d')} {ticker} 종가: ${closing_price:.2f} ({change_percent:.2f}%)")
     except Exception as e:
         await channel.send(f"티커 {ticker}에 대한 정보를 가져오는데 실패했습니다: {e}")
 
