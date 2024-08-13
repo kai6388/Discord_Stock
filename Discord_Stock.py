@@ -77,7 +77,7 @@ async def send_single_stock_price(channel, ticker): #개별 종가 출력 함수
         # 변화율을 계산합니다.
         change_percent = ((latest_close - previous_close) / previous_close) * 100
         
-        await channel.send(f"{datetime.now().strftime('%Y-%m-%d')} {ticker} 종가: ${latest_price:.2f} ({change_percent:.2f}%)")
+        await channel.send(f"{datetime.now().strftime('%Y-%m-%d')} {ticker} 종가: ${latest_close:.2f} ({change_percent:.2f}%)")
     except Exception as e:
         await channel.send(f"티커 {ticker}에 대한 정보를 가져오는데 실패했습니다: {e}")
 
