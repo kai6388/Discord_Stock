@@ -74,7 +74,7 @@ async def send_single_stock_price(channel, ticker): #개별 종가 출력 함수
         await channel.send(f"티커 {ticker}에 대한 정보를 가져오는데 실패했습니다: {e}")
 
 @bot.command(name='200MA')
-async def calculate_200ma(ctx):
+async def TQQQ_200MA(ctx):
     # TQQQ의 지난 1년간의 데이터 가져오기
     ticker = 'TQQQ'
     data = yf.download(ticker, period='1y')
