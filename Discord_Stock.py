@@ -49,6 +49,46 @@ async def on_ready():
     scheduler.add_job(check_watchlist, 'cron', hour=20, minute=17)
     scheduler.start()
 
+# MA 계산 함수
+def calculate_moving_averages(data):
+    """이동평균선 계산 함수"""
+    ma_20 = data['Close'].rolling(window=20).mean().iloc[-1]
+    ma_50 = data['Close'].rolling(window=50).mean().iloc[-1]
+    ma_100 = data['Close'].rolling(window=100).mean().iloc[-1]
+    ma_200 = data['Close'].rolling(window=200).mean().iloc[-1]
+    return ma_20, ma_50, ma_100, ma_200
+
+# !MA 명령어를 통해 종목의 MA, 종가를 출력
+@bot.command(name='MA')
+async def moving_averages(ctx, ticker: str):
+    ticker = ticker.upper()
+    
+    # 주식 데이터 가져오기 (1년간)
+    data = yf.download(ticker, period='1y')
+    
+    if data.empty:
+        await ctx.send(f"{ticker}에 대한 데이터를 가져올 수 없습니다.")
+        return
+    
+    # 종가 및 이동평균선 계산
+    latest_close = data['Close'].iloc[-1]
+    ma_20, ma_50, ma_100, ma_200 = calculate_moving_averages(data)
+    
+    # 출력 내용 생성
+    message = (
+        f"**{ticker}**의 종가와 이동평균선(MA):\n"
+        f"종가: ${latest_close:.2f}\n"
+        f"20MA: ${ma_20:.2f}\n"
+        f"50MA: ${ma_50:.2f}\n"
+        f"100MA: ${ma_100:.2f}\n"
+        f"200MA: ${ma_200:.2f}"
+    )
+    
+    # 디스코드 채널에 결과 전송
+    channel = bot.get_channel(CHANNEL_ID)
+    if channel:
+        await channel.send(message)
+
 @bot.command(name='관심종목추가')
 async def add_to_watchlist(ctx, ticker: str):
     ticker = ticker.upper()
@@ -152,8 +192,8 @@ async def stock_price_notification(channel=None): #종가 출력 함수
             channel = bot.get_channel(CHANNEL_ID)
         
         if channel is not None:
-            # 각 주식 티커에 대해 종가를 가져와서 메시지로 전송
-            for ticker in STOCK_TICKERS:
+            # 관심종목에 대해 종가를 가져와서 메시지로 전송
+            for ticker in watchlist:
                 await send_single_stock_price(channel, ticker)
         else:
             print("채널을 찾을 수 없습니다. CHANNEL_ID를 확인하세요.")
@@ -264,7 +304,7 @@ async def send_TQQQ_MA(ctx):#TQQQ의 20MA, 200MA를 출력
             result += "20MA TQQQ 매도"  # 위에서 아래로 내려간 경우
         elif previous_close < previous_ma_20 and latest_close > latest_ma_20:
             result += "20MA TQQQ 매수"  # 아래에서 위로 올라간 경우
-        if previous_close > previous_ma_200 and latest_close < latest_ma_200:
+        elif previous_close > previous_ma_200 and latest_close < latest_ma_200:
             result += "200MA TQQQ 매도"  # 위에서 아래로 내려간 경우
         elif previous_close < previous_ma_200 and latest_close > latest_ma_200:
             result += "200MA TQQQ 매수"  # 아래에서 위로 올라간 경우
