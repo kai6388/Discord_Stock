@@ -47,7 +47,33 @@ async def on_ready():
     scheduler.add_job(calculate_ma_scheduled, 'cron', hour=20, minute=15)
     scheduler.add_job(stock_price_notification, 'cron', hour=20, minute=16)
     scheduler.add_job(check_watchlist, 'cron', hour=20, minute=17)
+    scheduler.add_job(check_news, 'cron', hour=20, minute=18)
     scheduler.start()
+
+# 관심종목 관련 뉴스 출력
+async def check_news():
+    """관심종목에 대해 최신 뉴스를 체크하여 디스코드로 전송"""
+    messages = []
+    current_time = datetime.now()
+    one_day_ago = current_time - timedelta(days=1)
+
+    for ticker in watchlist:
+        stock = yf.Ticker(ticker)
+        news_items = stock.news
+        
+        for item in news_items:
+            news_time = datetime.utcfromtimestamp(item['providerPublishTime'])
+            if news_time > one_day_ago:
+                headline = item['title']
+                link = item['link']
+                messages.append(f"{ticker}: {headline}\n링크: {link}")
+    
+    if messages:
+        channel = bot.get_channel(CHANNEL_ID)
+        if channel:
+            await channel.send("\n\n".join(messages))
+        else:
+            print("채널을 찾을 수 없습니다.")
 
 # MA 계산 함수
 def calculate_moving_averages(data):
