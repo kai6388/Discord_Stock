@@ -125,6 +125,16 @@ async def add_to_watchlist(ctx, ticker: str):
     else:
         await ctx.send(f"{ticker}는 이미 관심종목에 있습니다.")
 
+@bot.command(name='관심종목제거')
+async def remove_from_watchlist(ctx, ticker: str):
+    ticker = ticker.upper()
+    if ticker in watchlist:
+        watchlist.remove(ticker)
+        save_watchlist()  # 관심종목이 제거될 때마다 파일에 저장
+        await ctx.send(f"{ticker}가 관심종목에서 제거되었습니다.")
+    else:
+        await ctx.send(f"{ticker}는 관심종목에 없습니다.")
+
 """관심종목을 watchlist.txt 파일에 저장하는 함수"""
 def save_watchlist():
     with open(WATCHLIST_FILE, 'w') as f:
