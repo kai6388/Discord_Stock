@@ -288,6 +288,7 @@ async def calculate_ma_scheduled():
     channel = bot.get_channel(CHANNEL_ID)
     if channel is not None:
         await send_TQQQ_MA(channel)
+        await send_SOXL_MA(channel)
     else:
         print("채널을 찾을 수 없습니다. CHANNEL_ID를 확인하세요.")
 
@@ -300,17 +301,17 @@ async def send_TQQQ_MA(ctx):#TQQQ의 20MA, 200MA를 출력
         # 종가 데이터
         closing_prices = data['Close']
 
+        # 20일 이동편균선 계산
+        ma_20 = closing_prices.rolling(window=20).mean()
+        
         # 200일 이동평균선 계산
         ma_200 = closing_prices.rolling(window=200).mean()
 
-        # 20일 이동편균선 계산
-        ma_20 = closing_prices.rolling(window=20).mean()
+        # 20일 이동평균선 + 10% 계산
+        ma_20_plus_10 = ma_20 * 1.10
 
         # 200일 이동평균선 + 10% 계산
         ma_200_plus_10 = ma_200 * 1.10
-    
-        # 20일 이동평균선 + 10% 계산
-        ma_20_plus_10 = ma_20 * 1.10
 
         # 최신 데이터
         latest_close = closing_prices.iloc[-1]
@@ -350,7 +351,68 @@ async def send_TQQQ_MA(ctx):#TQQQ의 20MA, 200MA를 출력
         # 채널에 결과 전송
             await ctx.send(result)
     except Exception as e:
-        await ctx.send(f"RSI를 계산하는 중 오류가 발생했습니다: {e}")
-    
+        await ctx.send(f"TQQQ의 MA를 계산하는 중 오류가 발생했습니다: {e}")
+
+async def send_SOXL_MA(ctx):#SOXL의 20MA, 200MA를 출력
+    try:
+        # TQQQ의 지난 1년간의 데이터 가져오기
+        ticker = 'SOXL'
+        data = yf.download(ticker, period='1y')
+
+        # 종가 데이터
+        closing_prices = data['Close']
+
+        # 20일 이동편균선 계산
+        ma_20 = closing_prices.rolling(window=20).mean()
+        
+        # 200일 이동평균선 계산
+        ma_200 = closing_prices.rolling(window=200).mean()
+
+        # 20일 이동평균선 + 10% 계산
+        ma_20_plus_10 = ma_20 * 1.10
+
+        # 200일 이동평균선 + 10% 계산
+        ma_200_plus_10 = ma_200 * 1.10
+
+        # 최신 데이터
+        latest_close = closing_prices.iloc[-1]
+        latest_ma_200 = ma_200.iloc[-1]
+        latest_ma_200_plus_10 = ma_200_plus_10.iloc[-1]
+        latest_ma_20 = ma_20.iloc[-1]
+        latest_ma_20_plus_10 = ma_20_plus_10.iloc[-1]
+
+        # 이전 종가와 200MA 계산
+        previous_close = closing_prices.iloc[-2]
+        previous_ma_200 = ma_200.iloc[-2]
+        previous_ma_20 = ma_20.iloc[-2]
+
+        # 변화율 계산
+        change_percent = ((latest_close - previous_close) / previous_close) * 100
+
+        # 결과 생성
+        result = (f"TQQQ의 이전 종가: {previous_close:.2f}\n"
+              f"TQQQ의 최신 종가: {latest_close:.2f} ({change_percent:.2f}%)\n"
+              f"20일 이동평균선: {latest_ma_20:.2f}\n"
+              f"20일 이동평균선 + 10%: {latest_ma_20_plus_10:.2f}\n"
+              f"200일 이동평균선: {latest_ma_200:.2f}\n"
+              f"200일 이동평균선 + 10%: {latest_ma_200_plus_10:.2f}\n")
+
+        # 매도/매수 판별
+        if previous_close > previous_ma_20 and latest_close < latest_ma_20:
+            result += "20MA SOXL 매도"  # 위에서 아래로 내려간 경우
+        elif previous_close < previous_ma_20 and latest_close > latest_ma_20:
+            result += "20MA SOXL 매수"  # 아래에서 위로 올라간 경우
+        elif previous_close > previous_ma_200 and latest_close < latest_ma_200:
+            result += "200MA SOXL 매도"  # 위에서 아래로 내려간 경우
+        elif previous_close < previous_ma_200 and latest_close > latest_ma_200:
+            result += "200MA SOXL 매수"  # 아래에서 위로 올라간 경우
+        else:
+            result += "SOXL의 종가는 큰 변화가 없습니다."
+
+        # 채널에 결과 전송
+            await ctx.send(result)
+    except Exception as e:
+        await ctx.send(f"SOXL의 MA를 계산하는 중 오류가 발생했습니다: {e}")
+
 # 봇 실행
 bot.run(TOKEN)
