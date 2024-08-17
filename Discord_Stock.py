@@ -8,7 +8,6 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from datetime import datetime
 from dotenv import load_dotenv
 
-
 load_dotenv()
 
 # 디스코드 봇 토큰
@@ -44,10 +43,10 @@ async def on_ready():
     load_watchlist()
     
     # 매일 오전 5시 30분에 stock_price_notification 함수를 실행하도록 스케줄러 설정
-    scheduler.add_job(calculate_ma_scheduled, 'cron', hour=20, minute=15)
-    scheduler.add_job(stock_price_notification, 'cron', hour=20, minute=16)
-    scheduler.add_job(check_watchlist, 'cron', hour=20, minute=17)
-    scheduler.add_job(check_news, 'cron', hour=20, minute=18)
+    scheduler.add_job(calculate_ma_scheduled, 'cron', day_of_week='mon-fri', hour=20, minute=15)
+    scheduler.add_job(stock_price_notification, 'cron', day_of_week='mon-fri', hour=20, minute=16)
+    scheduler.add_job(check_watchlist, 'cron', day_of_week='mon-fri', hour=20, minute=17)
+    scheduler.add_job(check_news, 'cron', day_of_week='mon-fri', hour=20, minute=18)
     scheduler.start()
 
 # 관심종목 관련 뉴스 출력
@@ -153,7 +152,7 @@ def load_watchlist():
 async def check_watchlist():
     for ticker in watchlist:
         # 주식 데이터 가져오기 (1년간)
-        data = yf.download(ticker, period='1Y')
+        data = yf.download(ticker, period='2Y')
         latest_close = data['Close'].iloc[-1]
         previous_close = data['Close'].iloc[-2]
         change_percent = ((latest_close - previous_close) / previous_close) * 100
@@ -296,7 +295,7 @@ async def send_TQQQ_MA(ctx):#TQQQ의 20MA, 200MA를 출력
     try:
         # TQQQ의 지난 1년간의 데이터 가져오기
         ticker = 'TQQQ'
-        data = yf.download(ticker, period='1y')
+        data = yf.download(ticker, period='2y')
 
         # 종가 데이터
         closing_prices = data['Close']
@@ -357,7 +356,7 @@ async def send_SOXL_MA(ctx):#SOXL의 20MA, 200MA를 출력
     try:
         # TQQQ의 지난 1년간의 데이터 가져오기
         ticker = 'SOXL'
-        data = yf.download(ticker, period='1y')
+        data = yf.download(ticker, period='2y')
 
         # 종가 데이터
         closing_prices = data['Close']
@@ -390,8 +389,8 @@ async def send_SOXL_MA(ctx):#SOXL의 20MA, 200MA를 출력
         change_percent = ((latest_close - previous_close) / previous_close) * 100
 
         # 결과 생성
-        result = (f"TQQQ의 이전 종가: {previous_close:.2f}\n"
-              f"TQQQ의 최신 종가: {latest_close:.2f} ({change_percent:.2f}%)\n"
+        result = (f"SOXL의 이전 종가: {previous_close:.2f}\n"
+              f"SOXL의 최신 종가: {latest_close:.2f} ({change_percent:.2f}%)\n"
               f"20일 이동평균선: {latest_ma_20:.2f}\n"
               f"20일 이동평균선 + 10%: {latest_ma_20_plus_10:.2f}\n"
               f"200일 이동평균선: {latest_ma_200:.2f}\n"
