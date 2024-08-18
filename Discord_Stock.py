@@ -187,9 +187,9 @@ async def check_watchlist():
         plt.plot(data['Close'].rolling(window=50).mean(), label='50MA')
         plt.plot(data['Close'].rolling(window=100).mean(), label='100MA')
         plt.plot(data['Close'].rolling(window=200).mean(), label='200MA')
-        plt.title(f"{ticker} 가격 차트")
-        plt.xlabel("날짜")
-        plt.ylabel("가격")
+        plt.title(f"{ticker} Chart")
+        plt.xlabel("Date")
+        plt.ylabel("Price")
         plt.legend()
 
         # 차트 저장
