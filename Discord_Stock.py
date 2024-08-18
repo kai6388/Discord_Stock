@@ -43,10 +43,10 @@ async def on_ready():
     load_watchlist()
     
     # 매일 오전 5시 30분에 stock_price_notification 함수를 실행하도록 스케줄러 설정
-    scheduler.add_job(calculate_ma_scheduled, 'cron', day_of_week='mon-fri', hour=20, minute=15)
-    scheduler.add_job(stock_price_notification, 'cron', day_of_week='mon-fri', hour=20, minute=16)
-    scheduler.add_job(check_watchlist, 'cron', day_of_week='mon-fri', hour=20, minute=17)
-    scheduler.add_job(check_news, 'cron', day_of_week='mon-fri', hour=20, minute=18)
+    scheduler.add_job(calculate_ma_scheduled, 'cron', day_of_week='sun-thu', hour=20, minute=15)
+    scheduler.add_job(stock_price_notification, 'cron', day_of_week='sun-thu', hour=20, minute=16)
+    scheduler.add_job(check_watchlist, 'cron', day_of_week='sun-thu', hour=20, minute=17)
+    scheduler.add_job(check_news, 'cron', day_of_week='sun-thu', hour=20, minute=18)
     scheduler.start()
 
 # 관심종목 관련 뉴스 출력
