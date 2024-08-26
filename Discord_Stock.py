@@ -198,10 +198,10 @@ async def check_watchlist():
         plt.close()
 
         # 디스코드 채널에 결과 전송
-        channel = bot.get_channel(CHANNEL_ID)  # CHANNEL_ID는 출력할 디스코드 채널의 ID로 설정해야 합니다.
-        if channel:
-            await channel.send(message)
-            await channel.send(file=discord.File(chart_file))
+        #channel = bot.get_channel(CHANNEL_ID)  # CHANNEL_ID는 출력할 디스코드 채널의 ID로 설정해야 합니다.
+        #if channel:
+            #await channel.send(message)
+            #await channel.send(file=discord.File(chart_file))
 
 @bot.command(name='관심종목') #관심종목 조회
 async def display_watchlist(ctx):
