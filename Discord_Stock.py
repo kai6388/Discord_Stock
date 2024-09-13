@@ -20,6 +20,7 @@ class CustomTimedRotatingFileHandler(TimedRotatingFileHandler):
     def __init__(self, *args, **kwargs):
         super(CustomTimedRotatingFileHandler, self).__init__(*args, **kwargs)
         self.total_data_sent = 0  # 하루 동안 전송된 데이터의 총량을 저장
+        self.total_data_received = 0  # 하루 동안 수신된 데이터의 총량을 저장
 
         # 추가: old_log 폴더 경로 설정
         self.old_log_dir = os.path.join(os.path.dirname(self.baseFilename), 'old_log')
@@ -30,7 +31,11 @@ class CustomTimedRotatingFileHandler(TimedRotatingFileHandler):
     def emit(self, record):
         super(CustomTimedRotatingFileHandler, self).emit(record)
         if hasattr(record, 'data_size'):
-            self.total_data_sent += record.data_size
+            direction = getattr(record, 'direction', 'output')  # 기본값은 'output'
+            if direction == 'input':
+                self.total_data_received += record.data_size
+            else:
+                self.total_data_sent += record.data_size
 
     def doRollover(self):
         # 부모 클래스의 doRollover() 호출로 로그 파일 회전
@@ -38,9 +43,11 @@ class CustomTimedRotatingFileHandler(TimedRotatingFileHandler):
         # 새로운 로그 파일에 어제 전송한 데이터 총량 기록
         if self.stream:
             self.stream.write(f"어제 전송된 총 데이터 양: {self.total_data_sent} bytes\n")
+            self.stream.write(f"어제 수신된 총 데이터 양: {self.total_data_received} bytes\n")
             self.stream.flush()
         # 데이터 총량 초기화
         self.total_data_sent = 0
+        self.total_data_received = 0
 
         # 추가: 오래된 로그 파일 이동
         self.move_old_logs()
@@ -131,6 +138,18 @@ async def on_ready():
     logging.info('Scheduler started')
 
 
+# 모든 수신 메시지의 크기를 로그에 기록
+@bot.event
+async def on_message(message):
+    if message.author == bot.user:
+        return  # 봇 자신이 보낸 메시지는 무시
+
+    input_data_size = len(message.content.encode('utf-8'))
+    logging.info(f'Received message of size {input_data_size} bytes', extra={'data_size': input_data_size, 'direction': 'input'})
+
+    await bot.process_commands(message)  # 명령어 처리
+
+
 # 관심종목 관련 뉴스 출력
 async def check_news():
     """관심종목에 대해 최신 뉴스를 체크하여 디스코드로 전송"""
@@ -159,7 +178,7 @@ async def check_news():
                 await channel.send(chunk)
                 # 전송한 메시지의 크기를 로깅
                 data_size = len(chunk.encode('utf-8'))
-                logging.info(f'Sent news message of size {data_size} bytes', extra={'data_size': data_size})
+                logging.info(f'Sent news message of size {data_size} bytes', extra={'data_size': data_size, 'direction': 'output'})
         else:
             logging.error("채널을 찾을 수 없습니다. CHANNEL_ID를 확인하세요.")
     else:
@@ -180,10 +199,15 @@ def calculate_moving_averages(data):
 @bot.command(name='MA')
 async def moving_averages(ctx, ticker: str):
     ticker = ticker.upper()
-    logging.info(f'Command !MA invoked for ticker: {ticker}')
+    input_data_size = len(ctx.message.content.encode('utf-8'))
+    logging.info(f'Command !MA invoked for ticker: {ticker}', extra={'data_size': input_data_size, 'direction': 'input'})
 
     # 주식 데이터 가져오기 (1년간)
     data = yf.download(ticker, period='1y')
+
+    # 다운로드한 데이터의 크기 로깅
+    data_size = data.memory_usage(index=True).sum()
+    logging.info(f'Fetched data for ticker: {ticker}, size: {data_size} bytes', extra={'data_size': data_size, 'direction': 'input'})
 
     if data.empty:
         await ctx.send(f"{ticker}에 대한 데이터를 가져올 수 없습니다.")
@@ -209,7 +233,7 @@ async def moving_averages(ctx, ticker: str):
     if channel:
         data_size = len(message.encode('utf-8'))
         await channel.send(message)
-        logging.info(f'Sent MA message for ticker: {ticker}, size: {data_size} bytes', extra={'data_size': data_size})
+        logging.info(f'Sent MA message for ticker: {ticker}, size: {data_size} bytes', extra={'data_size': data_size, 'direction': 'output'})
     else:
         logging.error("채널을 찾을 수 없습니다. CHANNEL_ID를 확인하세요.")
 
@@ -217,7 +241,8 @@ async def moving_averages(ctx, ticker: str):
 @bot.command(name='관심종목추가')
 async def add_to_watchlist(ctx, ticker: str):
     ticker = ticker.upper()
-    logging.info(f'Command !관심종목추가 invoked for ticker: {ticker}')
+    input_data_size = len(ctx.message.content.encode('utf-8'))
+    logging.info(f'Command !관심종목추가 invoked for ticker: {ticker}', extra={'data_size': input_data_size, 'direction': 'input'})
     if ticker not in watchlist:
         watchlist.append(ticker)
         save_watchlist()
@@ -231,7 +256,8 @@ async def add_to_watchlist(ctx, ticker: str):
 @bot.command(name='관심종목제거')
 async def remove_from_watchlist(ctx, ticker: str):
     ticker = ticker.upper()
-    logging.info(f'Command !관심종목제거 invoked for ticker: {ticker}')
+    input_data_size = len(ctx.message.content.encode('utf-8'))
+    logging.info(f'Command !관심종목제거 invoked for ticker: {ticker}', extra={'data_size': input_data_size, 'direction': 'input'})
     if ticker in watchlist:
         watchlist.remove(ticker)
         save_watchlist()
@@ -273,6 +299,11 @@ async def check_watchlist():
         try:
             # 주식 데이터 가져오기 (2년간)
             data = yf.download(ticker, period='2Y')
+
+            # 다운로드한 데이터의 크기 로깅
+            data_size = data.memory_usage(index=True).sum()
+            logging.info(f'Fetched data for ticker: {ticker}, size: {data_size} bytes', extra={'data_size': data_size, 'direction': 'input'})
+
             latest_close = data['Close'].iloc[-1]
             previous_close = data['Close'].iloc[-2]
             change_percent = ((latest_close - previous_close) / previous_close) * 100
@@ -308,7 +339,7 @@ async def check_watchlist():
             # 디스코드 채널에 결과 전송
             await channel.send(message)
             data_size = len(message.encode('utf-8'))
-            logging.info(f'Sent watchlist message for ticker: {ticker}, size: {data_size} bytes', extra={'data_size': data_size})
+            logging.info(f'Sent watchlist message for ticker: {ticker}, size: {data_size} bytes', extra={'data_size': data_size, 'direction': 'output'})
 
             if send_chart_flag:
                 # 차트 생성
@@ -334,7 +365,7 @@ async def check_watchlist():
 
                 # 차트 전송
                 await channel.send(file=discord.File(fp=buf, filename=f"{ticker}_chart.png"))
-                logging.info(f'Sent chart for ticker: {ticker}, size: {buf_size} bytes', extra={'data_size': buf_size})
+                logging.info(f'Sent chart for ticker: {ticker}, size: {buf_size} bytes', extra={'data_size': buf_size, 'direction': 'output'})
             else:
                 logging.info(f'No significant changes for ticker: {ticker}')
         except Exception as e:
@@ -343,22 +374,23 @@ async def check_watchlist():
 
 @bot.command(name='관심종목')  # 관심종목 조회
 async def display_watchlist(ctx):
-    logging.info('Command !관심종목 invoked')
+    logging.info('Command !관심종목 invoked', extra={'data_size': len(ctx.message.content.encode('utf-8')), 'direction': 'input'})
     if watchlist:
         message = f"현재 관심종목 리스트: {', '.join(watchlist)}"
         await ctx.send(message)
         data_size = len(message.encode('utf-8'))
-        logging.info(f'Sent watchlist to user, size: {data_size} bytes', extra={'data_size': data_size})
+        logging.info(f'Sent watchlist to user, size: {data_size} bytes', extra={'data_size': data_size, 'direction': 'output'})
     else:
         message = "현재 관심종목에 등록된 종목이 없습니다."
         await ctx.send(message)
         data_size = len(message.encode('utf-8'))
-        logging.info(f'Sent empty watchlist message, size: {data_size} bytes', extra={'data_size': data_size})
+        logging.info(f'Sent empty watchlist message, size: {data_size} bytes', extra={'data_size': data_size, 'direction': 'output'})
 
 
 @bot.command(name='종가')
 async def stock_price(ctx, *tickers):
-    logging.info(f'Command !종가 invoked with tickers: {tickers}')
+    input_data_size = len(ctx.message.content.encode('utf-8'))
+    logging.info(f'Command !종가 invoked with tickers: {tickers}', extra={'data_size': input_data_size, 'direction': 'input'})
     if len(tickers) == 0:
         # 티커가 입력되지 않으면 관심종목 사용
         await stock_price_notification(ctx.channel)
@@ -371,7 +403,7 @@ async def stock_price(ctx, *tickers):
         combined_message = "\n".join(messages)
         await ctx.send(combined_message)
         data_size = len(combined_message.encode('utf-8'))
-        logging.info(f'Sent stock prices for provided tickers, size: {data_size} bytes', extra={'data_size': data_size})
+        logging.info(f'Sent stock prices for provided tickers, size: {data_size} bytes', extra={'data_size': data_size, 'direction': 'output'})
 
 
 async def stock_price_notification(channel=None):
@@ -386,7 +418,7 @@ async def stock_price_notification(channel=None):
         combined_message = "\n".join(messages)
         await channel.send(combined_message)
         data_size = len(combined_message.encode('utf-8'))
-        logging.info(f'Sent stock prices for watchlist, size: {data_size} bytes', extra={'data_size': data_size})
+        logging.info(f'Sent stock prices for watchlist, size: {data_size} bytes', extra={'data_size': data_size, 'direction': 'output'})
     else:
         logging.error("채널을 찾을 수 없습니다. CHANNEL_ID를 확인하세요.")
 
@@ -394,6 +426,11 @@ async def stock_price_notification(channel=None):
 async def get_single_stock_price_message(ticker):
     try:
         data = yf.download(ticker, period='5d')
+
+        # 다운로드한 데이터의 크기 로깅
+        data_size = data.memory_usage(index=True).sum()
+        logging.info(f'Fetched data for ticker: {ticker}, size: {data_size} bytes', extra={'data_size': data_size, 'direction': 'input'})
+
         latest_close = data['Close'].iloc[-1]
         previous_close = data['Close'].iloc[-2]
         change_percent = ((latest_close - previous_close) / previous_close) * 100
@@ -408,10 +445,15 @@ async def get_single_stock_price_message(ticker):
 @bot.command(name='RSI')  # 특정 티커의 RSI 출력
 async def calculate_rsi(ctx, ticker: str):
     ticker = ticker.upper()
-    logging.info(f'Command !RSI invoked for ticker: {ticker}')
+    input_data_size = len(ctx.message.content.encode('utf-8'))
+    logging.info(f'Command !RSI invoked for ticker: {ticker}', extra={'data_size': input_data_size, 'direction': 'input'})
     try:
         # 특정 티커의 데이터 가져오기 (6개월)
         data = yf.download(ticker, period='6mo')
+
+        # 다운로드한 데이터의 크기 로깅
+        data_size = data.memory_usage(index=True).sum()
+        logging.info(f'Fetched data for ticker: {ticker}, size: {data_size} bytes', extra={'data_size': data_size, 'direction': 'input'})
 
         # 종가 데이터
         closing_prices = data['Close']
@@ -431,17 +473,18 @@ async def calculate_rsi(ctx, ticker: str):
         result = f"{ticker}의 최신 RSI: {latest_rsi:.2f}"
         await ctx.send(result)
         data_size = len(result.encode('utf-8'))
-        logging.info(f'Sent RSI for ticker: {ticker}, size: {data_size} bytes', extra={'data_size': data_size})
+        logging.info(f'Sent RSI for ticker: {ticker}, size: {data_size} bytes', extra={'data_size': data_size, 'direction': 'output'})
     except Exception as e:
         error_message = f"RSI를 계산하는 중 오류가 발생했습니다: {e}"
         await ctx.send(error_message)
         data_size = len(error_message.encode('utf-8'))
-        logging.error(f"Error calculating RSI for ticker {ticker}: {e}", extra={'data_size': data_size})
+        logging.error(f"Error calculating RSI for ticker {ticker}: {e}", extra={'data_size': data_size, 'direction': 'output'})
 
 
 @bot.command(name='TQQQ_MA')
 async def calculate_ma(ctx):
-    logging.info('Command !TQQQ_MA invoked')
+    input_data_size = len(ctx.message.content.encode('utf-8'))
+    logging.info('Command !TQQQ_MA invoked', extra={'data_size': input_data_size, 'direction': 'input'})
     await calculate_ma_scheduled()
 
 
@@ -460,6 +503,10 @@ async def send_TQQQ_MA(channel):
     logging.info(f'Processing MA for ticker: {ticker}')
     try:
         data = yf.download(ticker, period='1y')  # 약 1년치 데이터
+
+        # 다운로드한 데이터의 크기 로깅
+        data_size = data.memory_usage(index=True).sum()
+        logging.info(f'Fetched data for ticker: {ticker}, size: {data_size} bytes', extra={'data_size': data_size, 'direction': 'input'})
 
         # 종가 데이터
         closing_prices = data['Close']
@@ -503,14 +550,14 @@ async def send_TQQQ_MA(channel):
                       f"{', '.join(signals)}")
             await channel.send(result)
             data_size = len(result.encode('utf-8'))
-            logging.info(f'Sent MA message for ticker: {ticker}, size: {data_size} bytes', extra={'data_size': data_size})
+            logging.info(f'Sent MA message for ticker: {ticker}, size: {data_size} bytes', extra={'data_size': data_size, 'direction': 'output'})
         else:
             logging.info(f'No significant changes for ticker: {ticker}')
     except Exception as e:
         error_message = f"TQQQ의 MA를 계산하는 중 오류가 발생했습니다: {e}"
         await channel.send(error_message)
         data_size = len(error_message.encode('utf-8'))
-        logging.error(f"Error calculating MA for ticker {ticker}: {e}", extra={'data_size': data_size})
+        logging.error(f"Error calculating MA for ticker {ticker}: {e}", extra={'data_size': data_size, 'direction': 'output'})
 
 
 async def send_SOXL_MA(channel):
@@ -518,6 +565,10 @@ async def send_SOXL_MA(channel):
     logging.info(f'Processing MA for ticker: {ticker}')
     try:
         data = yf.download(ticker, period='1y')  # 약 1년치 데이터
+
+        # 다운로드한 데이터의 크기 로깅
+        data_size = data.memory_usage(index=True).sum()
+        logging.info(f'Fetched data for ticker: {ticker}, size: {data_size} bytes', extra={'data_size': data_size, 'direction': 'input'})
 
         # 종가 데이터
         closing_prices = data['Close']
@@ -561,14 +612,14 @@ async def send_SOXL_MA(channel):
                       f"{', '.join(signals)}")
             await channel.send(result)
             data_size = len(result.encode('utf-8'))
-            logging.info(f'Sent MA message for ticker: {ticker}, size: {data_size} bytes', extra={'data_size': data_size})
+            logging.info(f'Sent MA message for ticker: {ticker}, size: {data_size} bytes', extra={'data_size': data_size, 'direction': 'output'})
         else:
             logging.info(f'No significant changes for ticker: {ticker}')
     except Exception as e:
         error_message = f"SOXL의 MA를 계산하는 중 오류가 발생했습니다: {e}"
         await channel.send(error_message)
         data_size = len(error_message.encode('utf-8'))
-        logging.error(f"Error calculating MA for ticker {ticker}: {e}", extra={'data_size': data_size})
+        logging.error(f"Error calculating MA for ticker {ticker}: {e}", extra={'data_size': data_size, 'direction': 'output'})
 
 
 # 봇 실행
