@@ -459,7 +459,7 @@ async def send_TQQQ_MA(channel):
     ticker = 'TQQQ'
     logging.info(f'Processing MA for ticker: {ticker}')
     try:
-        data = yf.download(ticker, period='250d')  # 약 1년치 데이터
+        data = yf.download(ticker, period='1y')  # 약 1년치 데이터
 
         # 종가 데이터
         closing_prices = data['Close']
@@ -517,7 +517,7 @@ async def send_SOXL_MA(channel):
     ticker = 'SOXL'
     logging.info(f'Processing MA for ticker: {ticker}')
     try:
-        data = yf.download(ticker, period='250d')  # 약 1년치 데이터
+        data = yf.download(ticker, period='1y')  # 약 1년치 데이터
 
         # 종가 데이터
         closing_prices = data['Close']
