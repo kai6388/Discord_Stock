@@ -7,7 +7,7 @@ import logging
 from logging.handlers import TimedRotatingFileHandler
 from discord.ext import commands
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from datetime import datetime, timedelta, time
+from datetime import timedelta, time
 from dotenv import load_dotenv
 
 import glob  # 추가: 파일 목록을 가져오기 위한 모듈
