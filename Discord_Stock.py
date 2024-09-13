@@ -7,7 +7,7 @@ import logging
 from logging.handlers import TimedRotatingFileHandler
 from discord.ext import commands
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
 from dotenv import load_dotenv
 
 import glob  # 추가: 파일 목록을 가져오기 위한 모듈
@@ -77,7 +77,7 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 # 핸들러 설정 (매일 자정에 로그 파일 갱신)
-handler = CustomTimedRotatingFileHandler('bot.log', when='midnight', interval=1, atTime=time.time(20, 0), encoding='utf-8')
+handler = CustomTimedRotatingFileHandler('bot.log', when='midnight', interval=1, atTime=time(20, 0), encoding='utf-8')
 handler.suffix = "%Y%m%d"  # 로그 파일명에 날짜 추가
 handler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s:%(message)s'))
 logger.addHandler(handler)
