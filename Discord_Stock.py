@@ -14,6 +14,7 @@ from dotenv import load_dotenv
 import glob  # 추가: 파일 목록을 가져오기 위한 모듈
 import shutil  # 추가: 파일 이동을 위한 모듈
 import time  # 추가: 파일의 수정 시간을 확인하기 위한 모듈
+import json  # 추가: JSON 파일 처리를 위한 모듈
 
 # 로깅 설정
 class CustomTimedRotatingFileHandler(TimedRotatingFileHandler):
@@ -117,6 +118,7 @@ scheduler = AsyncIOScheduler()
 
 # 관심 종목 리스트
 WATCHLIST_FILE = 'watchlist.txt'
+SENT_NEWS_FILE = 'sent_news.json'  # 추가: 전송된 뉴스 저장 파일
 
 # 관심종목 초기화
 watchlist = []
@@ -150,13 +152,33 @@ async def on_message(message):
     await bot.process_commands(message)  # 명령어 처리
 
 
+# 전송된 뉴스 로드 함수
+def load_sent_news():
+    """전송된 뉴스 기사 링크를 로드"""
+    if os.path.exists(SENT_NEWS_FILE):
+        with open(SENT_NEWS_FILE, 'r', encoding='utf-8') as f:
+            sent_news = set(json.load(f))
+    else:
+        sent_news = set()
+    return sent_news
+
+# 전송된 뉴스 저장 함수
+def save_sent_news(sent_news):
+    """전송된 뉴스 기사 링크를 저장"""
+    with open(SENT_NEWS_FILE, 'w', encoding='utf-8') as f:
+        json.dump(list(sent_news), f, ensure_ascii=False, indent=4)
+
+
 # 관심종목 관련 뉴스 출력
 async def check_news():
     """관심종목에 대해 최신 뉴스를 체크하여 디스코드로 전송"""
     logging.info('Running check_news')
     messages = []
     current_time = datetime.now()
-    one_day_ago = current_time - timedelta(days=1)
+    one_week_ago = current_time - timedelta(days=7)
+
+    sent_news = load_sent_news()
+    new_sent_news = set()
 
     for ticker in watchlist:
         stock = yf.Ticker(ticker)
@@ -164,10 +186,11 @@ async def check_news():
 
         for item in news_items:
             news_time = datetime.utcfromtimestamp(item['providerPublishTime'])
-            if news_time > one_day_ago:
+            link = item['link']
+            if news_time > one_week_ago and link not in sent_news:
                 headline = item['title']
-                link = item['link']
                 messages.append(f"**{ticker}**: {headline}\n링크: {link}")
+                new_sent_news.add(link)
 
     if messages:
         combined_message = "\n\n".join(messages)
@@ -179,6 +202,9 @@ async def check_news():
                 # 전송한 메시지의 크기를 로깅
                 data_size = len(chunk.encode('utf-8'))
                 logging.info(f'Sent news message of size {data_size} bytes', extra={'data_size': data_size, 'direction': 'output'})
+            # 전송된 뉴스 업데이트 및 저장
+            sent_news.update(new_sent_news)
+            save_sent_news(sent_news)
         else:
             logging.error("채널을 찾을 수 없습니다. CHANNEL_ID를 확인하세요.")
     else:
